@@ -11,6 +11,10 @@
 #   curl -fsSL https://raw.githubusercontent.com/EmmaBPL/gods-eye-view-android/main/serveur/installer-o2switch.sh -o installer-gev.sh && bash installer-gev.sh ADRESSE
 # Exemple :
 #   bash installer-gev.sh globe.jedi3514.odns.fr
+#
+# Le script demande d'abord l'identifiant et le mot de passe (rapide), puis
+# lance l'installation en arrière-plan : elle continue même si la page du
+# terminal se déconnecte. Avancement : tail -5 ~/gev-install.log
 
 set -euo pipefail
 
@@ -29,9 +33,75 @@ DOMAIN="${DOMAIN#https://}"; DOMAIN="${DOMAIN#http://}"; DOMAIN="${DOMAIN%%/*}"
 say "Recherche de l'application Node.js « $APP_NAME » créée dans cPanel"
 ACTIVATE="$(ls -d "$HOME"/nodevenv/"$APP_NAME"/2[4-9]*/bin/activate 2>/dev/null | sort -V | tail -1 || true)"
 [ -n "$ACTIVATE" ] || fail "application introuvable. Crée-la d'abord dans cPanel › Setup Node.js App (version 24, racine « $APP_NAME »)."
+# Le script d'activation de cPanel utilise des variables non définies.
+set +u
 # shellcheck disable=SC1090
 source "$ACTIVATE"
+set -u
 echo "Node.js $(node -v), npm $(npm -v)"
+
+# --- 5. Mot de passe et invisibilité pour Google ------------------------------------
+say "Protection par mot de passe"
+HTACCESS="$(find "$HOME" -maxdepth 3 -name .htaccess ! -path "$APP/*" -exec grep -l "PassengerAppRoot \"$APP\"" {} + 2>/dev/null | head -1 || true)"
+[ -n "$HTACCESS" ] || fail "fichier .htaccess de l'application introuvable. Vérifie l'URL de l'application dans cPanel, puis relance ce script."
+echo "Fichier : $HTACCESS"
+
+PASSWD_DIR="$HOME/.htpasswds/gev"
+PASSWD_FILE="$PASSWD_DIR/passwd"
+mkdir -p "$PASSWD_DIR"
+chmod 700 "$HOME/.htpasswds" "$PASSWD_DIR"
+
+if [ -s "$PASSWD_FILE" ] && grep -q "GEV-AUTH BEGIN" "$HTACCESS"; then
+  echo "Un mot de passe est déjà en place (pour le changer : rm $PASSWD_FILE puis relance le script)."
+else
+  read -r -p "Choisis un identifiant : " GEV_USER < /dev/tty
+  while true; do
+    read -r -s -p "Choisis un mot de passe (au moins 12 caractères) : " GEV_PASS < /dev/tty; echo
+    read -r -s -p "Retape le mot de passe : " GEV_PASS2 < /dev/tty; echo
+    if [ "$GEV_PASS" != "$GEV_PASS2" ]; then echo "Les deux mots de passe sont différents, recommence."; continue; fi
+    if [ "${#GEV_PASS}" -lt 12 ]; then echo "Trop court, recommence."; continue; fi
+    break
+  done
+  HASH="$(printf '%s' "$GEV_PASS" | openssl passwd -apr1 -stdin)"
+  printf '%s:%s\n' "$GEV_USER" "$HASH" > "$PASSWD_FILE"
+  chmod 644 "$PASSWD_FILE"
+  unset GEV_PASS GEV_PASS2
+
+  sed -i '/# GEV-AUTH BEGIN/,/# GEV-AUTH END/d' "$HTACCESS"
+  TMPH="$(mktemp)"
+  cat > "$TMPH" <<HT
+# GEV-AUTH BEGIN
+AuthType Basic
+AuthName "Acces prive"
+AuthUserFile "$PASSWD_FILE"
+Require valid-user
+<IfModule mod_headers.c>
+Header always set X-Robots-Tag "noindex, nofollow, noarchive"
+</IfModule>
+# GEV-AUTH END
+HT
+  cat "$HTACCESS" >> "$TMPH"
+  cat "$TMPH" > "$HTACCESS"
+  rm -f "$TMPH"
+  echo "Mot de passe enregistré."
+fi
+
+# --- Lancement de la partie longue en arrière-plan ---------------------------
+if [ "${GEV_BG:-}" != "1" ]; then
+  LOG="$HOME/gev-install.log"
+  GEV_BG=1 nohup bash "$0" "$DOMAIN" > "$LOG" 2>&1 < /dev/null &
+  say "Installation lancée en arrière-plan"
+  cat <<MSG
+
+L'installation continue même si tu fermes cette page (10 à 20 minutes).
+
+Pour voir où elle en est, tape :
+  tail -5 ~/gev-install.log
+
+Quand la dernière ligne indique « Terminé ! », ouvre https://$DOMAIN
+MSG
+  exit 0
+fi
 
 # --- 2. Code de God's Eye View ----------------------------------------------
 if [ -d "$APP/.git" ]; then
@@ -88,52 +158,6 @@ npm install --include=dev --ignore-scripts --no-audit --no-fund
 
 say "Compilation de l'application (quelques minutes)"
 NODE_OPTIONS="--max-old-space-size=3072" npm run build
-
-# --- 5. Mot de passe et invisibilité pour Google ------------------------------------
-say "Protection par mot de passe"
-HTACCESS="$(find "$HOME" -maxdepth 3 -name .htaccess ! -path "$APP/*" -exec grep -l "PassengerAppRoot \"$APP\"" {} + 2>/dev/null | head -1 || true)"
-[ -n "$HTACCESS" ] || fail "fichier .htaccess de l'application introuvable. Vérifie l'URL de l'application dans cPanel, puis relance ce script."
-echo "Fichier : $HTACCESS"
-
-PASSWD_DIR="$HOME/.htpasswds/gev"
-PASSWD_FILE="$PASSWD_DIR/passwd"
-mkdir -p "$PASSWD_DIR"
-chmod 700 "$HOME/.htpasswds" "$PASSWD_DIR"
-
-if [ -s "$PASSWD_FILE" ] && grep -q "GEV-AUTH BEGIN" "$HTACCESS"; then
-  echo "Un mot de passe est déjà en place (pour le changer : rm $PASSWD_FILE puis relance le script)."
-else
-  read -r -p "Choisis un identifiant : " GEV_USER < /dev/tty
-  while true; do
-    read -r -s -p "Choisis un mot de passe (au moins 12 caractères) : " GEV_PASS < /dev/tty; echo
-    read -r -s -p "Retape le mot de passe : " GEV_PASS2 < /dev/tty; echo
-    if [ "$GEV_PASS" != "$GEV_PASS2" ]; then echo "Les deux mots de passe sont différents, recommence."; continue; fi
-    if [ "${#GEV_PASS}" -lt 12 ]; then echo "Trop court, recommence."; continue; fi
-    break
-  done
-  HASH="$(printf '%s' "$GEV_PASS" | openssl passwd -apr1 -stdin)"
-  printf '%s:%s\n' "$GEV_USER" "$HASH" > "$PASSWD_FILE"
-  chmod 644 "$PASSWD_FILE"
-  unset GEV_PASS GEV_PASS2
-
-  sed -i '/# GEV-AUTH BEGIN/,/# GEV-AUTH END/d' "$HTACCESS"
-  TMPH="$(mktemp)"
-  cat > "$TMPH" <<HT
-# GEV-AUTH BEGIN
-AuthType Basic
-AuthName "Acces prive"
-AuthUserFile "$PASSWD_FILE"
-Require valid-user
-<IfModule mod_headers.c>
-Header always set X-Robots-Tag "noindex, nofollow, noarchive"
-</IfModule>
-# GEV-AUTH END
-HT
-  cat "$HTACCESS" >> "$TMPH"
-  cat "$TMPH" > "$HTACCESS"
-  rm -f "$TMPH"
-  echo "Mot de passe enregistré."
-fi
 
 # --- 6. Redémarrage ------------------------------------------------------------
 say "Redémarrage de l'application"
