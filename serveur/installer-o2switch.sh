@@ -42,7 +42,10 @@ echo "Node.js $(node -v), npm $(npm -v)"
 
 # --- 5. Mot de passe et invisibilité pour Google ------------------------------------
 say "Protection par mot de passe"
-HTACCESS="$(find "$HOME" -maxdepth 3 -name .htaccess ! -path "$APP/*" -exec grep -l "PassengerAppRoot \"$APP\"" {} + 2>/dev/null | head -1 || true)"
+CANDIDATES="$(find "$HOME" -maxdepth 3 -name .htaccess ! -path "$APP/*" -exec grep -l "PassengerAppRoot \"$APP\"" {} + 2>/dev/null || true)"
+# Préfère le dossier qui porte le nom de l'adresse (cas d'un changement d'adresse).
+HTACCESS="$(printf '%s\n' "$CANDIDATES" | grep -F "/$DOMAIN/" | head -1 || true)"
+[ -n "$HTACCESS" ] || HTACCESS="$(printf '%s\n' "$CANDIDATES" | grep -v '^$' | head -1 || true)"
 [ -n "$HTACCESS" ] || fail "fichier .htaccess de l'application introuvable. Vérifie l'URL de l'application dans cPanel, puis relance ce script."
 echo "Fichier : $HTACCESS"
 
@@ -52,8 +55,8 @@ mkdir -p "$PASSWD_DIR"
 # Apache doit pouvoir traverser ces dossiers pour lire le fichier (crypté).
 chmod 711 "$HOME/.htpasswds" "$PASSWD_DIR"
 
-if [ -s "$PASSWD_FILE" ] && grep -q "GEV-AUTH BEGIN" "$HTACCESS"; then
-  echo "Un mot de passe est déjà en place (pour le changer : rm $PASSWD_FILE puis relance le script)."
+if [ -s "$PASSWD_FILE" ]; then
+  echo "Un mot de passe est déjà en place, je le réutilise (pour le changer : rm $PASSWD_FILE puis relance le script)."
 else
   read -r -p "Choisis un identifiant : " GEV_USER < /dev/tty
   while true; do
@@ -67,7 +70,10 @@ else
   printf '%s:%s\n' "$GEV_USER" "$HASH" > "$PASSWD_FILE"
   chmod 644 "$PASSWD_FILE"
   unset GEV_PASS GEV_PASS2
+  echo "Mot de passe enregistré."
+fi
 
+if ! grep -q "GEV-AUTH BEGIN" "$HTACCESS"; then
   sed -i '/# GEV-AUTH BEGIN/,/# GEV-AUTH END/d' "$HTACCESS"
   TMPH="$(mktemp)"
   cat > "$TMPH" <<HT
@@ -76,6 +82,10 @@ AuthType Basic
 AuthName "Acces prive"
 AuthUserFile "$PASSWD_FILE"
 Require valid-user
+# Laisse passer la vérification Let's Encrypt (création et renouvellement du certificat).
+<If "%{REQUEST_URI} =~ m#^/\\.well-known/(acme-challenge|pki-validation)/#">
+Require all granted
+</If>
 <IfModule mod_headers.c>
 Header always set X-Robots-Tag "noindex, nofollow, noarchive"
 </IfModule>
@@ -84,7 +94,7 @@ HT
   cat "$HTACCESS" >> "$TMPH"
   cat "$TMPH" > "$HTACCESS"
   rm -f "$TMPH"
-  echo "Mot de passe enregistré."
+  echo "Protection ajoutée à $HTACCESS"
 fi
 
 # --- Lancement de la partie longue en arrière-plan ---------------------------
