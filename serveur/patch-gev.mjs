@@ -97,7 +97,8 @@ const patches = [
       'Every layer has id, lat, lon. Fields — ${voiceQueryFieldHint()}.' +
       ' AIRLINES (GEV-PATCH): flights carry no airline name; an airline is its ICAO callsign prefix, so filter {field:"callsign",op:"contains",value:"<PREFIX>"} on the flights layer with scope anywhere unless a place is named, and never filter callsign by the plain airline name.' +
       ' Prefixes: Air Canada ACA, Air Canada Rouge ROU, Air Canada Express JZA, Air Transat TSC, WestJet WJA, Porter POE, Flair FLE, Air Inuit AIE, Air France AFR, Transavia France TVF, easyJet EZY, Ryanair RYR, Volotea VOE, Corsair CRL, Air Caraïbes FWI, Lufthansa DLH, British Airways BAW, KLM KLM, Swiss SWR, Iberia IBE, ITA ITY, TAP TAP, Delta DAL, United UAL, American AAL, Emirates UAE, Qatar QTR, Turkish THY.' +
-      ' Any other airline: use its three-letter ICAO code. The map cannot hide other flights: say so, give the count and the first callsigns, and offer to track or fly to one.`,',
+      ' Any other airline: use its three-letter ICAO code.' +
+      ' SHOWING SEVERAL (GEV-PATCH): when the user asks to SEE or SHOW several aircraft ("show me all Air Canada flights in Europe"), never track_entity or fly to just one. Instead: (1) analyst_query with the matching filter and scope (region name such as "Europe" or a country), limit 24; (2) annotate_map with one pin per returned item, using its lat/lon and its callsign as the label, all in one call; (3) fly_to_location to the region so every pin is in view. Then say how many were found, that the pins mark them, that the map still shows other flights, and offer to track one.`,',
   },
   {
     name: 'Caméras : toucher l’image pour l’agrandir',
