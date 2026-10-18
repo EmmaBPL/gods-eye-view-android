@@ -1,0 +1,39 @@
+plugins {
+    id 'com.android.application'
+}
+
+def buildNumber = (project.findProperty('buildNumber') ?: '1').toString().toInteger()
+
+android {
+    namespace 'com.emmabpl.godseyeview'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.emmabpl.godseyeview'
+        minSdk 26
+        targetSdk 35
+        versionCode buildNumber
+        versionName "1.0.${buildNumber}"
+    }
+
+    signingConfigs {
+        release {
+            storeFile file('release.keystore')
+            storePassword 'gevlauncher'
+            keyAlias 'gev'
+            keyPassword 'gevlauncher'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

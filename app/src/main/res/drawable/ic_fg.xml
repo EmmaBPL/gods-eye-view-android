@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Eye outline -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FF7CFFB2"
+        android:strokeWidth="3"
+        android:strokeLineJoin="round"
+        android:pathData="M24,54 C34,37 74,37 84,54 C74,71 34,71 24,54 Z" />
+    <!-- Globe -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FF7CFFB2"
+        android:strokeWidth="2.5"
+        android:pathData="M42,54 a12,12 0 1,0 24,0 a12,12 0 1,0 -24,0" />
+    <!-- Meridian -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FF7CFFB2"
+        android:strokeWidth="1.5"
+        android:pathData="M54,42 a5.5,12 0 1,0 0,24 a5.5,12 0 1,0 0,-24" />
+    <!-- Equator and parallels -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FF7CFFB2"
+        android:strokeWidth="1.5"
+        android:pathData="M42,54 L66,54 M44,48 L64,48 M44,60 L64,60" />
+</vector>
