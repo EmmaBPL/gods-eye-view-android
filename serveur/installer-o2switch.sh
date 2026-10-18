@@ -147,10 +147,10 @@ else
   echo "GEV_ALLOWED_HOSTS=$DOMAIN" >> .env
 fi
 
-curl -fsSL "https://raw.githubusercontent.com/EmmaBPL/gods-eye-view-android/main/serveur/app.cjs" -o app.cjs
+curl -fsSL "https://raw.githubusercontent.com/EmmaBPL/gods-eye-view-android/main/serveur/app.cjs?t=$(date +%s)" -o app.cjs
 
 say "Correctifs pour l'hébergement et les adresses"
-curl -fsSL "https://raw.githubusercontent.com/EmmaBPL/gods-eye-view-android/main/serveur/patch-gev.mjs" -o "$HOME/.gev-patch.mjs"
+curl -fsSL "https://raw.githubusercontent.com/EmmaBPL/gods-eye-view-android/main/serveur/patch-gev.mjs?t=$(date +%s)" -o "$HOME/.gev-patch.mjs"
 node "$HOME/.gev-patch.mjs" "$APP" || echo "!! Les correctifs n'ont pas pu être appliqués ; on continue."
 
 # --- 4. Dépendances et compilation ---------------------------------------------
