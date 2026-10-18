@@ -149,6 +149,10 @@ fi
 
 curl -fsSL "https://raw.githubusercontent.com/EmmaBPL/gods-eye-view-android/main/serveur/app.cjs" -o app.cjs
 
+say "Correctifs pour l'hébergement et les adresses"
+curl -fsSL "https://raw.githubusercontent.com/EmmaBPL/gods-eye-view-android/main/serveur/patch-gev.mjs" -o "$HOME/.gev-patch.mjs"
+node "$HOME/.gev-patch.mjs" "$APP" || echo "!! Les correctifs n'ont pas pu être appliqués ; on continue."
+
 # --- 4. Dépendances et compilation ---------------------------------------------
 say "Installation des dépendances (5 à 10 minutes)"
 export PUPPETEER_SKIP_DOWNLOAD=1
