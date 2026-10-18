@@ -99,6 +99,14 @@ const patches = [
       ' Prefixes: Air Canada ACA, Air Canada Rouge ROU, Air Canada Express JZA, Air Transat TSC, WestJet WJA, Porter POE, Flair FLE, Air Inuit AIE, Air France AFR, Transavia France TVF, easyJet EZY, Ryanair RYR, Volotea VOE, Corsair CRL, Air Caraïbes FWI, Lufthansa DLH, British Airways BAW, KLM KLM, Swiss SWR, Iberia IBE, ITA ITY, TAP TAP, Delta DAL, United UAL, American AAL, Emirates UAE, Qatar QTR, Turkish THY.' +
       ' Any other airline: use its three-letter ICAO code. The map cannot hide other flights: say so, give the count and the first callsigns, and offer to track or fly to one.`,',
   },
+  {
+    name: 'Caméras : toucher l’image pour l’agrandir',
+    file: 'index.html',
+    find: '  <script type="module" src="/src/main.js"></script>',
+    replace:
+      '  <script src="/gev-extras.js" defer></script>\n' +
+      '  <script type="module" src="/src/main.js"></script>',
+  },
 ];
 
 let applied = 0;

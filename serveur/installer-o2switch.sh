@@ -151,7 +151,13 @@ curl -fsSL "https://raw.githubusercontent.com/EmmaBPL/gods-eye-view-android/main
 
 say "Correctifs pour l'hébergement et les adresses"
 curl -fsSL "https://raw.githubusercontent.com/EmmaBPL/gods-eye-view-android/main/serveur/patch-gev.mjs?t=$(date +%s)" -o "$HOME/.gev-patch.mjs"
+mkdir -p "$APP/public"
+curl -fsSL "https://raw.githubusercontent.com/EmmaBPL/gods-eye-view-android/main/serveur/gev-extras.js?t=$(date +%s)" -o "$APP/public/gev-extras.js" || true
 node "$HOME/.gev-patch.mjs" "$APP" || echo "!! Les correctifs n'ont pas pu être appliqués ; on continue."
+
+say "Caméras de Lyon et du Québec"
+curl -fsSL "https://raw.githubusercontent.com/EmmaBPL/gods-eye-view-android/main/serveur/cameras-fr-qc.mjs?t=$(date +%s)" -o "$HOME/.gev-cameras.mjs" \
+  && node "$HOME/.gev-cameras.mjs" "$APP" || echo "!! Caméras supplémentaires non ajoutées ; on continue."
 
 # --- 4. Dépendances et compilation ---------------------------------------------
 say "Installation des dépendances (5 à 10 minutes)"
