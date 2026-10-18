@@ -49,7 +49,8 @@ echo "Fichier : $HTACCESS"
 PASSWD_DIR="$HOME/.htpasswds/gev"
 PASSWD_FILE="$PASSWD_DIR/passwd"
 mkdir -p "$PASSWD_DIR"
-chmod 700 "$HOME/.htpasswds" "$PASSWD_DIR"
+# Apache doit pouvoir traverser ces dossiers pour lire le fichier (crypté).
+chmod 711 "$HOME/.htpasswds" "$PASSWD_DIR"
 
 if [ -s "$PASSWD_FILE" ] && grep -q "GEV-AUTH BEGIN" "$HTACCESS"; then
   echo "Un mot de passe est déjà en place (pour le changer : rm $PASSWD_FILE puis relance le script)."
