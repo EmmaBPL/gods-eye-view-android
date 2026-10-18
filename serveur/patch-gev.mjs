@@ -89,6 +89,16 @@ const patches = [
     find: `        'accept-language': 'en',`,
     replace: `        'accept-language': process.env.GEV_SEARCH_LANGUAGE || 'fr,en',`,
   },
+  {
+    name: 'Voix : rechercher les vols par compagnie aérienne',
+    file: 'server/providers/openai/toolDescriptions.js',
+    find: 'Every layer has id, lat, lon. Fields — ${voiceQueryFieldHint()}.`,',
+    replace:
+      'Every layer has id, lat, lon. Fields — ${voiceQueryFieldHint()}.' +
+      ' AIRLINES (GEV-PATCH): flights carry no airline name; an airline is its ICAO callsign prefix, so filter {field:"callsign",op:"contains",value:"<PREFIX>"} on the flights layer with scope anywhere unless a place is named, and never filter callsign by the plain airline name.' +
+      ' Prefixes: Air Canada ACA, Air Canada Rouge ROU, Air Canada Express JZA, Air Transat TSC, WestJet WJA, Porter POE, Flair FLE, Air Inuit AIE, Air France AFR, Transavia France TVF, easyJet EZY, Ryanair RYR, Volotea VOE, Corsair CRL, Air Caraïbes FWI, Lufthansa DLH, British Airways BAW, KLM KLM, Swiss SWR, Iberia IBE, ITA ITY, TAP TAP, Delta DAL, United UAL, American AAL, Emirates UAE, Qatar QTR, Turkish THY.' +
+      ' Any other airline: use its three-letter ICAO code. The map cannot hide other flights: say so, give the count and the first callsigns, and offer to track or fly to one.`,',
+  },
 ];
 
 let applied = 0;
