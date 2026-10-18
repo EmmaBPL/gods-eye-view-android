@@ -7,6 +7,45 @@ const fs = require('node:fs');
 
 process.chdir(__dirname);
 
+// Derrière Apache (o2switch), chaque requête porte des en-têtes de proxy
+// (X-Forwarded-*, Via…). God's Eye View refuse alors ses fonctions payantes
+// (voix OpenAI, trafic TomTom) : c'est prévu pour une installation locale.
+// Ici l'accès est déjà protégé par le mot de passe Apache, donc on retire ces
+// en-têtes et on indique le vrai protocole (https) avant que l'appli ne les lise.
+// Les contrôles d'origine (Origin, Sec-Fetch-Site) restent actifs.
+const http = require('node:http');
+const PROXY_HEADERS = [
+  'forwarded',
+  'via',
+  'x-forwarded-for',
+  'x-forwarded-host',
+  'x-forwarded-port',
+  'x-forwarded-proto',
+  'x-forwarded-ssl',
+  'x-real-ip',
+  'cf-connecting-ip',
+  'cf-ray',
+];
+const originalEmit = http.Server.prototype.emit;
+http.Server.prototype.emit = function patchedEmit(event, req) {
+  if (event === 'request' && req && req.headers) {
+    const forwardedProto = String(req.headers['x-forwarded-proto'] || '')
+      .split(',')[0]
+      .trim()
+      .toLowerCase();
+    const proto = forwardedProto || process.env.GEV_PUBLIC_PROTOCOL || 'https';
+    for (const name of PROXY_HEADERS) delete req.headers[name];
+    try {
+      Object.defineProperty(req.socket, 'encrypted', {
+        value: proto === 'https',
+        configurable: true,
+        writable: true,
+      });
+    } catch {}
+  }
+  return originalEmit.apply(this, arguments);
+};
+
 const DIST = path.join(__dirname, 'dist');
 const LOG = path.join(__dirname, 'gev-requests.log');
 let logged = 0;
