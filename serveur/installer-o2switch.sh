@@ -73,11 +73,16 @@ else
   echo "Mot de passe enregistré."
 fi
 
-if ! grep -q "GEV-AUTH BEGIN" "$HTACCESS"; then
+if ! grep -q "ErrorDocument 401" "$HTACCESS"; then
   sed -i '/# GEV-AUTH BEGIN/,/# GEV-AUTH END/d' "$HTACCESS"
   TMPH="$(mktemp)"
   cat > "$TMPH" <<HT
 # GEV-AUTH BEGIN
+# Messages d'erreur servis par Apache lui-même (sinon l'appli les remplacerait
+# par sa page d'accueil avec un code 200, et le mot de passe ne serait pas demandé).
+ErrorDocument 401 "Acces prive"
+ErrorDocument 403 "Acces refuse"
+ErrorDocument 500 "Erreur serveur"
 AuthType Basic
 AuthName "Acces prive"
 AuthUserFile "$PASSWD_FILE"
