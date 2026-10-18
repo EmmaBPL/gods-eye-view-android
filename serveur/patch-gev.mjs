@@ -107,6 +107,28 @@ const patches = [
       '  <script src="/gev-extras.js" defer></script>\n' +
       '  <script type="module" src="/src/main.js"></script>',
   },
+  {
+    name: 'Démarrage sur la planète entière (au lieu d’Austin)',
+    file: 'src/camera.js',
+    find: 'export function flyToAustin(viewer) {\n',
+    replace:
+      'export function flyToAustin(viewer) {\n' +
+      '  // GEV-PATCH: ouvrir sur la Terre entière, centrée sur l’Atlantique Nord\n' +
+      '  // (Québec et Europe visibles), plutôt que de plonger sur Austin.\n' +
+      '  if (!globalThis.__gevStartOnCity) {\n' +
+      '    viewer.camera.setView({\n' +
+      '      destination: Cesium.Cartesian3.fromDegrees(-35, 38, 18000000),\n' +
+      '      orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 },\n' +
+      '    });\n' +
+      '    return () => {};\n' +
+      '  }\n',
+  },
+  {
+    name: 'Message de démarrage',
+    file: 'src/app/controls.js',
+    find: "    loaderStatus.textContent = t('Flying to Austin, TX...');",
+    replace: "    loaderStatus.textContent = 'Chargement de la planète…';",
+  },
 ];
 
 let applied = 0;

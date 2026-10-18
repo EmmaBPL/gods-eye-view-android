@@ -56,6 +56,18 @@ public class MainActivity extends Activity {
     private static final String KEY_URL = "server_url";
     private static final String KEY_USER = "auth_user";
     private static final String KEY_PASS = "auth_pass";
+    private static final String KEY_UI_WIDTH = "ui_width";
+
+    // Largeur virtuelle de la page (points CSS). L'interface de God's Eye View
+    // est prévue pour des écrans plus larges que celui d'un téléphone : à la
+    // largeur réelle (~400 pt) ses panneaux se chevauchent. 0 = largeur réelle.
+    private static final int DEFAULT_UI_WIDTH = 640;
+    private static final int[] UI_WIDTHS = {0, 520, 640, 800};
+    private static final String[] UI_WIDTH_LABELS = {
+            "Normale (taille réelle du téléphone)",
+            "Un peu plus compacte",
+            "Compacte (recommandée)",
+            "Très compacte (tout petit)"};
 
     private static final int REQ_MEDIA = 2;
     private static final int REQ_GEO = 3;
@@ -87,6 +99,14 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            // Utilise tout l'écran, y compris autour de la caméra frontale ;
+            // la page reçoit les marges de sécurité (viewport-fit=cover).
+            WindowManager.LayoutParams attrs = getWindow().getAttributes();
+            attrs.layoutInDisplayCutoutMode =
+                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+            getWindow().setAttributes(attrs);
+        }
         prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
 
         FrameLayout root = new FrameLayout(this);
@@ -139,6 +159,9 @@ public class MainActivity extends Activity {
         s.setAllowFileAccess(false);
         s.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
         s.setUserAgentString(s.getUserAgentString() + " GodsEyeViewAndroid/1.0");
+        // Ignore le réglage « taille du texte » d'Android : il grossit tous les
+        // textes de la page et fait déborder les panneaux les uns sur les autres.
+        s.setTextZoom(100);
         CookieManager.getInstance().setAcceptCookie(true);
 
         view.setWebViewClient(new WebViewClient() {
@@ -156,8 +179,14 @@ public class MainActivity extends Activity {
             }
 
             @Override
+            public void onPageCommitVisible(WebView v, String url) {
+                applyViewport(v);
+            }
+
+            @Override
             public void onPageFinished(WebView v, String url) {
                 if (webShown) authAttempts = 0;
+                applyViewport(v);
             }
 
             @Override
@@ -250,6 +279,39 @@ public class MainActivity extends Activity {
         });
 
         return view;
+    }
+
+    private int uiWidth() {
+        return prefs.getInt(KEY_UI_WIDTH, DEFAULT_UI_WIDTH);
+    }
+
+    /** Fixe la largeur virtuelle de la page et active les zones sûres (encoche). */
+    private void applyViewport(WebView v) {
+        if (v == null || !isServer(Uri.parse(String.valueOf(v.getUrl())))) return;
+        int width = uiWidth();
+        String content = (width > 0 ? "width=" + width : "width=device-width, initial-scale=1")
+                + ", viewport-fit=cover, user-scalable=no";
+        String js = "(function(c){var m=document.querySelector('meta[name=viewport]');"
+                + "if(!m){m=document.createElement('meta');m.name='viewport';"
+                + "(document.head||document.documentElement).appendChild(m);}"
+                + "if(m.content!==c){m.content=c;window.dispatchEvent(new Event('resize'));}"
+                + "})('" + content + "');";
+        v.evaluateJavascript(js, null);
+    }
+
+    private void chooseUiWidth() {
+        int current = uiWidth();
+        int checked = 2;
+        for (int i = 0; i < UI_WIDTHS.length; i++) if (UI_WIDTHS[i] == current) checked = i;
+        new AlertDialog.Builder(this)
+                .setTitle("Taille de l'interface")
+                .setSingleChoiceItems(UI_WIDTH_LABELS, checked, (d, which) -> {
+                    prefs.edit().putInt(KEY_UI_WIDTH, UI_WIDTHS[which]).apply();
+                    d.dismiss();
+                    loadServer();
+                })
+                .setNegativeButton("Annuler", null)
+                .show();
     }
 
     private boolean isServer(Uri uri) {
@@ -539,6 +601,20 @@ public class MainActivity extends Activity {
 
     @Override
     public void onBackPressed() {
+        if (webShown && webView.getVisibility() == View.VISIBLE) {
+            // Ferme d'abord une caméra agrandie, s'il y en a une.
+            webView.evaluateJavascript(
+                    "(function(){var o=document.querySelector('.gev-cctv-zoom');"
+                            + "if(o){o.click();return 1;}return 0;})()",
+                    result -> {
+                        if (!"1".equals(result)) handleBack();
+                    });
+            return;
+        }
+        handleBack();
+    }
+
+    private void handleBack() {
         if (webShown && webView.getVisibility() == View.VISIBLE && webView.canGoBack()) {
             webView.goBack();
             return;
@@ -549,9 +625,11 @@ public class MainActivity extends Activity {
         }
         new AlertDialog.Builder(this)
                 .setTitle("God's Eye View")
-                .setItems(new String[]{"Quitter", "Recharger", "Changer l'adresse du serveur"}, (d, which) -> {
+                .setItems(new String[]{"Quitter", "Recharger", "Taille de l'interface",
+                        "Changer l'adresse du serveur"}, (d, which) -> {
                     if (which == 0) finish();
                     else if (which == 1) loadServer();
+                    else if (which == 2) chooseUiWidth();
                     else showSetup();
                 })
                 .show();
