@@ -131,25 +131,7 @@ else
   echo "GEV_ALLOWED_HOSTS=$DOMAIN" >> .env
 fi
 
-cat > app.cjs <<'JS'
-'use strict';
-// Démarre God's Eye View (serveur « preview » de Vite) sous Passenger / cPanel.
-const path = require('node:path');
-process.chdir(__dirname);
-import('vite')
-  .then(({ preview }) =>
-    preview({
-      root: __dirname,
-      configFile: path.join(__dirname, 'vite.config.js'),
-      preview: { port: Number(process.env.PORT) || 4173, host: '127.0.0.1' },
-    }),
-  )
-  .then(() => console.log("God's Eye View est prêt."))
-  .catch((error) => {
-    console.error(error);
-    process.exit(1);
-  });
-JS
+curl -fsSL "https://raw.githubusercontent.com/EmmaBPL/gods-eye-view-android/main/serveur/app.cjs" -o app.cjs
 
 # --- 4. Dépendances et compilation ---------------------------------------------
 say "Installation des dépendances (5 à 10 minutes)"
